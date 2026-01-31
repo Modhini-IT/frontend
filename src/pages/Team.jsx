@@ -4,8 +4,7 @@ import { ArrowLeft, Phone, Mail } from 'lucide-react';
 
 const Team = () => {
     const navigate = useNavigate();
-    const [visibleCards, setVisibleCards] = useState([]);
-    const observerRef = useRef(null);
+
 
     const teamMembers = [
         {
@@ -52,29 +51,7 @@ const Team = () => {
         }
     ];
 
-    useEffect(() => {
-        const options = {
-            root: null,
-            rootMargin: '-20% 0px -20% 0px',
-            threshold: [0, 0.3, 0.6, 1]
-        };
-
-        observerRef.current = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                const index = parseInt(entry.target.dataset.index);
-                if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
-                    setVisibleCards(prev =>
-                        prev.includes(index) ? prev : [...prev, index]
-                    );
-                }
-            });
-        }, options);
-
-        const cards = document.querySelectorAll('.team-card-trigger');
-        cards.forEach(card => observerRef.current.observe(card));
-
-        return () => observerRef.current?.disconnect();
-    }, []);
+  
 
     return (
         <div className="min-h-screen px-6 md:px-8 relative bg-gradient-to-b from-gray-900 to-black">
@@ -96,7 +73,7 @@ const Team = () => {
                     </p>
                 </div>
 
-                <div className="relative">
+                <div className="relative h-[300vh]">
                     {teamMembers.map((member, index) => (
                         <div
                             key={index}
@@ -104,24 +81,18 @@ const Team = () => {
                             className="team-card-trigger sticky top-1/2 -translate-y-1/2 flex items-center justify-center h-screen"
 
                         >
-                            <div
-                                className={`glass-panel mx-auto w-full max-w-2xl p-8 transition-all duration-1000 transform ${
-                                    visibleCards.includes(index)
-                                        ? 'opacity-100 translate-y-0 scale-100'
-                                        : 'opacity-0 translate-y-20 scale-95'
-                                }`}
-                                style={{
-                                    zIndex: index,
+                           <div
+  className="glass-panel mx-auto w-full max-w-2xl p-8 transition-all duration-700 transform"
+  style={{
+    zIndex: teamMembers.length - index,
+    transform: `translateY(${index * 28}px) scale(${1 - index * 0.06})`,
+    background: 'rgba(0, 0, 0, 0.6)',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '24px',
+  }}
+>
 
-                                    background: 'rgba(0, 0, 0, 0.6)',
-                                    backdropFilter: 'blur(20px)',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    borderRadius: '24px',
-                                    boxShadow: visibleCards.includes(index)
-                                        ? '0 25px 50px -12px rgba(16, 185, 129, 0.25)'
-                                        : 'none'
-                                }}
-                            >
                                 <div className="flex flex-col items-center text-center mb-8">
                                     <div
                                         className="w-24 h-24 rounded-full bg-emerald-400 flex items-center justify-center text-black font-bold text-3xl shadow-2xl shadow-emerald-400/30 mb-6 transition-transform duration-700"
