@@ -96,12 +96,13 @@ const Team = () => {
                     </p>
                 </div>
 
-                <div className="space-y-[55vh]">
+                <div className="relative">
                     {teamMembers.map((member, index) => (
                         <div
                             key={index}
                             data-index={index}
-                            className="team-card-trigger min-h-[80vh] flex items-center justify-center"
+                            className="team-card-trigger sticky top-1/2 -translate-y-1/2 flex items-center justify-center h-screen"
+
                         >
                             <div
                                 className={`glass-panel mx-auto w-full max-w-2xl p-8 transition-all duration-1000 transform ${
@@ -110,6 +111,8 @@ const Team = () => {
                                         : 'opacity-0 translate-y-20 scale-95'
                                 }`}
                                 style={{
+                                    zIndex: index,
+
                                     background: 'rgba(0, 0, 0, 0.6)',
                                     backdropFilter: 'blur(20px)',
                                     border: '1px solid rgba(255, 255, 255, 0.1)',
