@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, User } from 'lucide-react';
 
 const Team = () => {
     const navigate = useNavigate();
@@ -19,7 +19,8 @@ const Team = () => {
     useEffect(() => {
         const options = {
             root: null,
-            threshold: 0.15, // Triggers earlier for a smoother flow
+            rootMargin: '0px 0px -15% 0px',
+            threshold: 0.2
         };
 
         observerRef.current = new IntersectionObserver((entries) => {
@@ -38,93 +39,106 @@ const Team = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-emerald-500/30">
-            {/* Custom CSS Injection */}
-            <style>{`
-                .glass-card {
-                    transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-                    will-change: transform, opacity;
-                }
-                .initial-blob {
-                    transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-                }
-            `}</style>
+        <div className="min-h-screen bg-[#0b0e14] text-white overflow-x-hidden font-sans selection:bg-[#10b981]/30">
+            {/* Eco-Themed Parallax Blobs */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                <div className="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-[#10b981]/10 rounded-full blur-[120px] animate-pulse" />
+                <div className="absolute bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-[#0ea5e9]/5 rounded-full blur-[120px]" />
+            </div>
 
-            {/* Back Button */}
-            <button
-                onClick={() => navigate('/')}
-                className="fixed top-8 left-8 z-50 flex items-center gap-2 bg-white/5 border border-white/10 px-5 py-2.5 rounded-full backdrop-blur-xl hover:bg-white/10 transition-all active:scale-95"
-            >
-                <ArrowLeft size={20} />
-                <span className="font-medium">Back</span>
-            </button>
+            {/* Navigation */}
+            <nav className="fixed top-0 w-full z-50 px-8 py-6 flex justify-between items-center bg-[#0b0e14]/80 backdrop-blur-md border-b border-white/5">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-[#10b981] rounded-lg flex items-center justify-center">
+                        <User size={18} className="text-[#0b0e14]" />
+                    </div>
+                    <span className="font-bold text-xl tracking-tight">EcoTrack <span className="text-[#10b981]">Team</span></span>
+                </div>
+                <button
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+                >
+                    <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                    Back to Dashboard
+                </button>
+            </nav>
 
-            <div className="max-w-4xl mx-auto px-6 pt-32 pb-40">
-                {/* Header Section */}
-                <header className="text-center mb-40">
-                    <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
-                        Meet <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Team</span> Ethu Nagarjuna Vaa
+            <div className="max-w-4xl mx-auto px-6 pt-40 pb-60 relative z-10">
+                <header className="text-center mb-32">
+                    <h1 className="text-5xl md:text-6xl font-extrabold mb-6 tracking-tight">
+                        Meet the <span className="text-[#10b981]">Innovators</span>
                     </h1>
-                    <p className="text-gray-400 text-lg md:text-xl font-light max-w-2xl mx-auto leading-relaxed">
-                        BTech IT • 1st Year • Sri Venkateswara College of Engineering
-                    </p>
-                    <div className="mt-10 animate-bounce text-gray-600">
-                        <p className="text-xs uppercase tracking-[0.2em]">Scroll to reveal</p>
+                    <div className="flex items-center justify-center gap-3 text-gray-400 bg-white/5 w-fit mx-auto px-6 py-2 rounded-full border border-white/10">
+                        <span className="w-2 h-2 rounded-full bg-[#10b981] animate-ping" />
+                        BTech IT • Sri Venkateswara College of Engineering
                     </div>
                 </header>
 
-                {/* Team List */}
-                <div className="space-y-32">
+                {/* Team Stack */}
+                <div className="flex flex-col gap-12">
                     {teamMembers.map((member, index) => {
                         const isVisible = visibleCards.includes(index);
                         return (
                             <div
                                 key={index}
                                 data-index={index}
-                                className="team-card-trigger min-h-[40vh] flex items-center justify-center"
+                                className="team-card-trigger w-full"
                             >
                                 <div
-                                    className={`glass-card relative w-full max-w-2xl p-10 md:p-12 overflow-hidden ${
-                                        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-24'
+                                    className={`relative transition-all duration-1000 cubic-bezier(0.2, 1, 0.3, 1) ${
+                                        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20 scale-[0.98]'
                                     }`}
-                                    style={{
-                                        background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                        backdropFilter: 'blur(24px)',
-                                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                                        borderRadius: '40px',
-                                        boxShadow: isVisible ? '0 40px 80px -20px rgba(0,0,0,0.5), 0 0 40px -10px rgba(16,185,129,0.1)' : 'none'
-                                    }}
                                 >
-                                    {/* Animated Initial Bubble */}
-                                    <div className="flex flex-col items-center mb-10">
-                                        <div 
-                                            className={`initial-blob w-24 h-24 rounded-3xl bg-emerald-400 flex items-center justify-center text-black font-black text-3xl mb-6 shadow-[0_0_40px_-5px_rgba(52,211,153,0.6)] ${
-                                                isVisible ? 'scale-100 rotate-0' : 'scale-50 rotate-45'
-                                            }`}
-                                        >
-                                            {member.initials}
-                                        </div>
-                                        <h3 className="text-4xl font-bold tracking-tight mb-2">{member.name}</h3>
-                                        <span className={`px-4 py-1 rounded-full text-sm font-semibold tracking-wide uppercase ${
-                                            member.role === 'Team Leader' ? 'bg-emerald-400/10 text-emerald-400' : 'bg-white/5 text-gray-400'
-                                        }`}>
-                                            {member.role}
-                                        </span>
-                                    </div>
+                                    {/* Card Decoration (EcoTrack Style Line) */}
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-[#10b981] rounded-l-2xl z-20" />
 
-                                    {/* Contact Details */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="flex items-center gap-4 bg-white/[0.03] p-4 rounded-2xl border border-white/[0.05] hover:bg-white/[0.06] transition-colors group">
-                                            <div className="p-2 bg-emerald-400/10 rounded-lg group-hover:scale-110 transition-transform">
-                                                <Mail size={18} className="text-emerald-400" />
+                                    <div className="bg-[#161b22] border border-white/5 p-8 md:p-12 rounded-2xl shadow-2xl overflow-hidden">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                                            
+                                            <div className="flex items-center gap-6">
+                                                {/* Initials Circle */}
+                                                <div className="w-20 h-20 shrink-0 rounded-2xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center text-[#10b981] font-bold text-2xl shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                                                    {member.initials}
+                                                </div>
+                                                
+                                                <div>
+                                                    <h3 className="text-3xl font-bold tracking-tight mb-1">{member.name}</h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-sm font-semibold uppercase tracking-widest ${
+                                                            member.role === 'Team Leader' ? 'text-[#10b981]' : 'text-gray-500'
+                                                        }`}>
+                                                            {member.role}
+                                                        </span>
+                                                        {member.role === 'Team Leader' && (
+                                                            <span className="bg-[#10b981]/20 text-[#10b981] text-[10px] px-2 py-0.5 rounded-md font-black">CORE</span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <span className="text-sm font-mono text-gray-300 truncate">{member.email}</span>
+
+                                            {/* Contact Info (Dashboard Pill Style) */}
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex items-center gap-3 bg-[#0b0e14] px-4 py-3 rounded-xl border border-white/5 hover:border-[#10b981]/30 transition-all cursor-default">
+                                                    <Mail size={16} className="text-[#10b981]" />
+                                                    <span className="text-sm font-mono text-gray-400">{member.email}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3 bg-[#0b0e14] px-4 py-3 rounded-xl border border-white/5 hover:border-[#10b981]/30 transition-all cursor-default">
+                                                    <Phone size={16} className="text-[#10b981]" />
+                                                    <span className="text-sm font-mono text-gray-400">{member.phone}</span>
+                                                </div>
+                                            </div>
+
                                         </div>
-                                        <div className="flex items-center gap-4 bg-white/[0.03] p-4 rounded-2xl border border-white/[0.05] hover:bg-white/[0.06] transition-colors group">
-                                            <div className="p-2 bg-emerald-400/10 rounded-lg group-hover:scale-110 transition-transform">
-                                                <Phone size={18} className="text-emerald-400" />
+
+                                        {/* Progress Bar Detail (Visual reference to EcoTrack Dashboard) */}
+                                        <div className="mt-10 pt-8 border-t border-white/5 flex items-center gap-4">
+                                            <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                <div 
+                                                    className="h-full bg-[#10b981] rounded-full transition-all duration-1000 delay-500" 
+                                                    style={{ width: isVisible ? '100%' : '0%' }}
+                                                />
                                             </div>
-                                            <span className="text-sm font-mono text-gray-300">{member.phone}</span>
+                                            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-tighter">Contribution Active</span>
                                         </div>
                                     </div>
                                 </div>
@@ -132,6 +146,10 @@ const Team = () => {
                         );
                     })}
                 </div>
+
+                <footer className="mt-40 text-center text-gray-600 text-sm">
+                    <p>© 2026 Team Ethu Nagarjuna Vaa • EcoTrack Initiative</p>
+                </footer>
             </div>
         </div>
     );
