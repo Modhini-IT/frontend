@@ -1,0 +1,132 @@
+:root {
+    --color-1: #00e6b8;
+    /* Emerald */
+    --color-2: #34d399;
+    /* Light Emerald */
+    --color-3: #ffffff;
+    /* White */
+    --color-4: #050510;
+    /* Dark (bg) */
+}
+
+/* Container */
+.gooey-nav-container {
+    position: relative;
+    width: 100%;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.gooey-nav-container nav {
+    position: relative;
+    z-index: 20;
+}
+
+.gooey-nav-container ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    /* Spacing between items */
+}
+
+.gooey-nav-container li {
+    position: relative;
+    cursor: pointer;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: opacity 0.3s;
+}
+
+.gooey-nav-container li a {
+    display: block;
+    padding: 12px 24px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: color 0.3s;
+}
+
+.gooey-nav-container li.active a {
+    color: transparent !important;
+    /* Hide original text on active, shown by effect */
+}
+
+/* SVG Filter Effect (simulated via CSS for this specific request logic) */
+/* The provided JS relies on .effect.filter and .effect.text overlaying the target */
+
+.effect {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 12px;
+    transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        width 0.4s ease,
+        height 0.4s ease;
+}
+
+/* Background blob */
+.effect.filter {
+    z-index: 10;
+    background: rgba(0, 230, 184, 0.1);
+    /* filter: url('#goo'); we can add SVG filter later if needed, but for now CSS approach */
+}
+
+/* Text Overlay */
+.effect.text {
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    /* Match link padding */
+    color: var(--accent-primary);
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.effect.text.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Particles */
+.particle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    background: var(--color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 25;
+    animation: particle-anim var(--time) forwards ease-out;
+}
+
+@keyframes particle-anim {
+    0% {
+        transform: translate(-50%, -50%) rotate(var(--rotate)) translate(var(--start-x), var(--start-y)) scale(0);
+        opacity: 0;
+    }
+
+    20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(var(--rotate)) translate(var(--start-x), var(--start-y)) scale(var(--scale));
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(var(--rotate)) translate(var(--end-x), var(--end-y)) scale(0);
+    }
+}
+
+.point {
+    display: none;
+    /* Internal use if needed */
+}
