@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail } from 'lucide-react';
 
-const Team= () => {
+const Team = () => {
     const navigate = useNavigate();
     const [visibleCards, setVisibleCards] = useState([]);
     const observerRef = useRef(null);
@@ -56,20 +56,16 @@ const Team= () => {
         const options = {
             root: null,
             rootMargin: '-20% 0px -20% 0px',
-            threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+            threshold: [0, 0.3, 0.6, 1]
         };
 
         observerRef.current = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
                 const index = parseInt(entry.target.dataset.index);
-                
                 if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
-                    setVisibleCards(prev => {
-                        if (!prev.includes(index)) {
-                            return [...prev, index].sort((a, b) => a - b);
-                        }
-                        return prev;
-                    });
+                    setVisibleCards(prev =>
+                        prev.includes(index) ? prev : [...prev, index]
+                    );
                 }
             });
         }, options);
@@ -77,35 +73,30 @@ const Team= () => {
         const cards = document.querySelectorAll('.team-card-trigger');
         cards.forEach(card => observerRef.current.observe(card));
 
-        return () => {
-            if (observerRef.current) {
-                observerRef.current.disconnect();
-            }
-        };
+        return () => observerRef.current?.disconnect();
     }, []);
 
     return (
-        <div className="min-h-screen p-8 relative bg-gradient-to-b from-gray-900 to-black">
+        <div className="min-h-screen px-6 md:px-8 relative bg-gradient-to-b from-gray-900 to-black">
             <button
                 onClick={() => navigate('/')}
-                className="fixed top-8 left-8 nav-back text-lg z-50 bg-black/50 px-4 py-2 rounded-full backdrop-blur-md border border-white/10 hover:bg-black/70 transition-all"
+                className="fixed top-8 left-8 z-50 bg-black/50 px-4 py-2 rounded-full backdrop-blur-md border border-white/10 hover:bg-black/70 transition-all flex items-center gap-2"
             >
-                <ArrowLeft size={24} />
+                <ArrowLeft size={20} />
                 Back
             </button>
 
-            <div className="max-w-4xl mx-auto pt-32 pb-20">
+            <div className="max-w-5xl mx-auto pt-32 pb-20">
                 <div className="text-center mb-32 sticky top-0 z-10 py-8 bg-gradient-to-b from-gray-900 to-transparent">
                     <h1 className="text-5xl md:text-7xl font-bold mb-6">
                         Meet <span className="text-emerald-400">Team</span> Ethu Nagarjuna Vaa
                     </h1>
                     <p className="text-xl text-gray-400">
                         BTech IT • 1st Year • Sri Venkateswara College of Engineering
-                        
                     </p>
                 </div>
 
-                <div className="space-y-[60vh]">
+                <div className="space-y-[55vh]">
                     {teamMembers.map((member, index) => (
                         <div
                             key={index}
@@ -113,7 +104,7 @@ const Team= () => {
                             className="team-card-trigger min-h-[80vh] flex items-center justify-center"
                         >
                             <div
-                                className={`glass-panel p-8 max-w-2xl w-full transition-all duration-1000 transform ${
+                                className={`glass-panel mx-auto w-full max-w-2xl p-8 transition-all duration-1000 transform ${
                                     visibleCards.includes(index)
                                         ? 'opacity-100 translate-y-0 scale-100'
                                         : 'opacity-0 translate-y-20 scale-95'
@@ -123,8 +114,8 @@ const Team= () => {
                                     backdropFilter: 'blur(20px)',
                                     border: '1px solid rgba(255, 255, 255, 0.1)',
                                     borderRadius: '24px',
-                                    boxShadow: visibleCards.includes(index) 
-                                        ? '0 25px 50px -12px rgba(16, 185, 129, 0.25)' 
+                                    boxShadow: visibleCards.includes(index)
+                                        ? '0 25px 50px -12px rgba(16, 185, 129, 0.25)'
                                         : 'none'
                                 }}
                             >
@@ -132,17 +123,23 @@ const Team= () => {
                                     <div
                                         className="w-24 h-24 rounded-full bg-emerald-400 flex items-center justify-center text-black font-bold text-3xl shadow-2xl shadow-emerald-400/30 mb-6 transition-transform duration-700"
                                         style={{
-                                            transform: visibleCards.includes(index) 
-                                                ? 'scale(1) rotate(0deg)' 
+                                            transform: visibleCards.includes(index)
+                                                ? 'scale(1) rotate(0deg)'
                                                 : 'scale(0.5) rotate(-180deg)'
                                         }}
                                     >
                                         {member.initials}
                                     </div>
-                                    <h3 className="text-3xl font-bold mb-2">{member.name}</h3>
+
+                                    <h3 className="text-3xl font-bold mb-2">
+                                        {member.name}
+                                    </h3>
+
                                     <p
                                         className={`text-lg font-medium ${
-                                            member.role === 'Team Leader' ? 'text-emerald-400' : 'text-gray-400'
+                                            member.role === 'Team Leader'
+                                                ? 'text-emerald-400'
+                                                : 'text-gray-400'
                                         }`}
                                     >
                                         {member.role}
@@ -151,28 +148,33 @@ const Team= () => {
 
                                 <div className="space-y-4 bg-black/30 rounded-xl p-6">
                                     <div
-                                        className="flex items-center gap-4 text-gray-300 transition-all duration-500 delay-200"
+                                        className="flex items-center gap-4 text-gray-300 transition-all duration-500"
                                         style={{
                                             opacity: visibleCards.includes(index) ? 1 : 0,
-                                            transform: visibleCards.includes(index) 
-                                                ? 'translateX(0)' 
+                                            transform: visibleCards.includes(index)
+                                                ? 'translateX(0)'
                                                 : 'translateX(-20px)'
                                         }}
                                     >
                                         <Mail size={20} className="text-emerald-400 flex-shrink-0" />
-                                        <span className="font-mono text-sm break-all">{member.email}</span>
+                                        <span className="font-mono text-sm break-all">
+                                            {member.email}
+                                        </span>
                                     </div>
+
                                     <div
-                                        className="flex items-center gap-4 text-gray-300 transition-all duration-500 delay-300"
+                                        className="flex items-center gap-4 text-gray-300 transition-all duration-500"
                                         style={{
                                             opacity: visibleCards.includes(index) ? 1 : 0,
-                                            transform: visibleCards.includes(index) 
-                                                ? 'translateX(0)' 
+                                            transform: visibleCards.includes(index)
+                                                ? 'translateX(0)'
                                                 : 'translateX(-20px)'
                                         }}
                                     >
                                         <Phone size={20} className="text-emerald-400 flex-shrink-0" />
-                                        <span className="font-mono text-sm">{member.phone}</span>
+                                        <span className="font-mono text-sm">
+                                            {member.phone}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -180,7 +182,7 @@ const Team= () => {
                     ))}
                 </div>
 
-                <div className="h-[40vh]"></div>
+                <div className="h-[40vh]" />
             </div>
         </div>
     );
