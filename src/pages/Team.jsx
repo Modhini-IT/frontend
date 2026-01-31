@@ -1,135 +1,122 @@
 import React, { useRef, useEffect, useState, createContext, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, ShieldCheck, Copy, Check } from 'lucide-react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-// Register GSAP plugin
-gsap.registerPlugin(ScrollTrigger);
+// --- INLINE ICONS (No lucide-react) ---
+const ShieldCheck = ({ size = 20, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
 
-// --- SCROLL STACK COMPONENTS ---
+const ArrowLeft = ({ size = 16, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="m12 19-7-7 7-7" />
+    <path d="M19 12H5" />
+  </svg>
+);
 
+const Mail = ({ size = 18, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect width="20" height="16" x="2" y="4" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
+);
+
+const Phone = ({ size = 18, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+);
+
+const Copy = ({ size = 16, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+  </svg>
+);
+
+const Check = ({ size = 18, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+// --- NATIVE SCROLL STACK (No GSAP) ---
 const ScrollStackContext = createContext(null);
 
-const ScrollStackItem = ({ children }) => {
+const ScrollStackItem = ({ children, index }) => {
   const itemRef = useRef(null);
-  const ctx = useContext(ScrollStackContext);
-  
+  const [transform, setTransform] = useState(`scale(${0.9 + index * 0.02})`);
+  const [isSticky, setIsSticky] = useState(false);
+
   useEffect(() => {
-    if (!ctx) return;
-    ctx.registerItem(itemRef.current);
-    return () => ctx.unregisterItem(itemRef.current);
-  }, [ctx]);
+    const element = itemRef.current;
+    if (!element) return;
+
+    const handleScroll = () => {
+      const rect = element.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const stackTrigger = windowHeight * 0.20; // 20% from top
+      const startOffset = windowHeight * 0.5; // Start animation 50vh away
+      
+      // Calculate progress based on distance to stack position
+      const distance = rect.top - stackTrigger;
+      let progress = 1 - (distance / startOffset);
+      progress = Math.max(0, Math.min(1, progress));
+      
+      // Scale from base scale up to 1
+      const baseScale = 0.9 + (index * 0.02);
+      const currentScale = baseScale + (1 - baseScale) * progress;
+      
+      // Subtle parallax offset
+      const yOffset = (1 - progress) * (index * 15);
+      
+      setTransform(`scale(${currentScale}) translateY(${-yOffset}px)`);
+      setIsSticky(progress >= 0.8);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial calculation
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [index]);
 
   return (
     <div 
       ref={itemRef} 
-      className="scroll-stack-item will-change-transform"
-      style={{ 
-        position: 'relative',
-        width: '100%',
-        marginBottom: '4rem',
-        zIndex: 1
+      style={{
+        transform: transform,
+        transformOrigin: 'center top',
+        position: 'sticky',
+        top: `${20 + (index * 2.5)}%`,
+        zIndex: index + 1,
+        marginBottom: index === 5 ? '100vh' : '2rem', // Extra scroll space for last item
+        transition: 'filter 0.3s ease',
+        filter: isSticky ? 'brightness(1)' : 'brightness(0.95)',
       }}
+      className="will-change-transform w-full"
     >
       {children}
     </div>
   );
 };
 
-const ScrollStack = ({ 
-  children,
-  itemStackDistance = 80,
-  stackPosition = "20%",
-  baseScale = 0.9,
-  itemScale = 0.02,
-}) => {
-  const containerRef = useRef(null);
-  const itemsRef = useRef([]);
-  const triggersRef = useRef([]);
-
-  const registerItem = (el) => {
-    if (el && !itemsRef.current.includes(el)) {
-      itemsRef.current.push(el);
-    }
-  };
-
-  const unregisterItem = (el) => {
-    itemsRef.current = itemsRef.current.filter(item => item !== el);
-  };
-
-  useEffect(() => {
-    const items = itemsRef.current;
-    if (items.length === 0) return;
-
-    // Clear previous triggers
-    triggersRef.current.forEach(st => st.kill());
-    triggersRef.current = [];
-
-    const stackPosValue = parseInt(stackPosition);
-    const isPercentage = stackPosition.includes('%');
-    
-    items.forEach((item, index) => {
-      const scaleValue = baseScale + (index * itemScale);
-      const stackingOffset = index * itemStackDistance;
-      
-      // Initial state
-      gsap.set(item, {
-        scale: scaleValue,
-        transformOrigin: "center top",
-        zIndex: index + 1
-      });
-
-      // Create scroll trigger for stacking
-      const trigger = ScrollTrigger.create({
-        trigger: item,
-        start: () => `top ${isPercentage ? `${stackPosValue + (index * 5)}%` : `${stackPosValue + (index * 60)}px`}`,
-        end: () => `+=${window.innerHeight * 0.8}`,
-        pin: true,
-        pinSpacing: false,
-        scrub: 0.5,
-        onUpdate: (self) => {
-          const progress = self.progress;
-          const currentScale = gsap.utils.interpolate(scaleValue, 1, progress);
-          const yOffset = stackingOffset * (1 - progress);
-          
-          gsap.set(item, {
-            scale: currentScale,
-            y: -yOffset,
-            zIndex: index + 1 + (progress * 10)
-          });
-        }
-      });
-      
-      triggersRef.current.push(trigger);
-    });
-
-    return () => {
-      triggersRef.current.forEach(st => st.kill());
-      triggersRef.current = [];
-    };
-  }, [itemStackDistance, stackPosition, baseScale, itemScale]);
-
+const ScrollStack = ({ children }) => {
+  const childrenArray = React.Children.toArray(children);
+  
   return (
-    <ScrollStackContext.Provider value={{ registerItem, unregisterItem }}>
-      <div 
-        ref={containerRef}
-        className="scroll-stack-container relative"
-        style={{
-          perspective: '1000px',
-          paddingTop: '2rem',
-        }}
-      >
-        {children}
-      </div>
-    </ScrollStackContext.Provider>
+    <div style={{ perspective: '1000px', position: 'relative' }}>
+      {childrenArray.map((child, index) => (
+        <ScrollStackItem key={index} index={index}>
+          {child}
+        </ScrollStackItem>
+      ))}
+    </div>
   );
 };
 
-// --- MAIN TEAM COMPONENT ---
-
+// --- MAIN COMPONENT ---
 const Team = () => {
-    const navigate = useNavigate();
     const [copiedIndex, setCopiedIndex] = useState(null);
 
     const teamMembers = [
@@ -148,107 +135,291 @@ const Team = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0d1117] text-white overflow-x-hidden">
+        <div className="min-h-screen bg-[#0d1117] text-white overflow-x-hidden" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             {/* Nav */}
-            <nav className="fixed top-0 w-full z-[1000] px-8 py-5 flex justify-between items-center bg-[#0d1117]/90 backdrop-blur-xl border-b border-white/5">
-                <div className="flex items-center gap-3">
-                    <ShieldCheck size={20} className="text-emerald-400" />
-                    <span className="font-bold text-xl tracking-tight italic">EcoTrack <span className="text-emerald-400 not-italic">Team</span></span>
+            <nav style={{
+                position: 'fixed',
+                top: 0,
+                width: '100%',
+                zIndex: 1000,
+                padding: '1.25rem 2rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: 'rgba(13, 17, 23, 0.9)',
+                backdropFilter: 'blur(12px)',
+                borderBottom: '1px solid rgba(255,255,255,0.05)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <ShieldCheck size={20} className="text-emerald-400" style={{ color: '#34d399' }} />
+                    <span style={{ fontWeight: 'bold', fontSize: '1.25rem', letterSpacing: '-0.025em', fontStyle: 'italic' }}>
+                        EcoTrack <span style={{ color: '#34d399', fontStyle: 'normal' }}>Team</span>
+                    </span>
                 </div>
                 <button 
-                    onClick={() => navigate('/')} 
-                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-all bg-white/5 px-4 py-2 rounded-full hover:bg-white/10"
+                    onClick={() => window.history.back()}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.875rem',
+                        color: '#9ca3af',
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '9999px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.target.style.color = '#ffffff';
+                        e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.target.style.color = '#9ca3af';
+                        e.target.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    }}
                 >
                     <ArrowLeft size={16} /> Dashboard
                 </button>
             </nav>
 
             {/* Main Content */}
-            <div className="pt-32 px-4 md:px-8 max-w-6xl mx-auto">
+            <div style={{ paddingTop: '8rem', paddingLeft: '1rem', paddingRight: '1rem', maxWidth: '72rem', margin: '0 auto' }}>
                 {/* Header */}
-                <header className="text-center mb-24">
-                    <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter italic">
-                        MEET THE <span className="text-emerald-400 not-italic">INNOVATORS</span>
+                <header style={{ textAlign: 'center', marginBottom: '4rem' }}>
+                    <h1 style={{ 
+                        fontSize: 'clamp(3rem, 8vw, 4.5rem)', 
+                        fontWeight: '900', 
+                        marginBottom: '1.5rem', 
+                        letterSpacing: '-0.05em',
+                        fontStyle: 'italic',
+                        lineHeight: 1.1
+                    }}>
+                        MEET THE <span style={{ color: '#34d399', fontStyle: 'normal' }}>INNOVATORS</span>
                     </h1>
-                    <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 px-4 py-1 rounded-full text-emerald-400 text-[10px] font-black tracking-[0.4em] uppercase">
+                    <div style={{ 
+                        display: 'inline-block',
+                        backgroundColor: 'rgba(52, 211, 153, 0.1)', 
+                        border: '1px solid rgba(52, 211, 153, 0.2)', 
+                        padding: '0.25rem 1rem', 
+                        borderRadius: '9999px', 
+                        color: '#34d399', 
+                        fontSize: '0.625rem', 
+                        fontWeight: 900, 
+                        letterSpacing: '0.4em',
+                        textTransform: 'uppercase'
+                    }}>
                         SVCE • BTech IT
                     </div>
                 </header>
 
                 {/* Stacking Cards */}
-                <ScrollStack 
-                    itemStackDistance={80}
-                    stackPosition="20%"
-                    baseScale={0.9}
-                    itemScale={0.02}
-                >
+                <ScrollStack>
                     {teamMembers.map((member, index) => (
-                        <ScrollStackItem key={index}>
-                            <div className="relative h-full w-full p-[1.5px] rounded-[32px] bg-gradient-to-br from-emerald-500/40 via-white/5 to-blue-500/20 shadow-2xl backdrop-blur-sm">
-                                <div className="bg-[#090b11]/95 h-full w-full rounded-[30px] p-8 md:p-12 flex flex-col justify-between min-h-[400px]">
+                        <div key={index} style={{
+                            position: 'relative',
+                            width: '100%',
+                            padding: '1.5px',
+                            borderRadius: '32px',
+                            background: 'linear-gradient(135deg, rgba(52,211,153,0.4), rgba(255,255,255,0.05), rgba(59,130,246,0.2))',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                        }}>
+                            <div style={{
+                                backgroundColor: 'rgba(9, 11, 17, 0.95)',
+                                borderRadius: '30px',
+                                padding: '2rem',
+                                minHeight: '400px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                border: '1px solid rgba(255,255,255,0.05)'
+                            }}>
+                                {/* Card Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                        <div style={{
+                                            width: '4rem',
+                                            height: '4rem',
+                                            borderRadius: '1rem',
+                                            background: 'linear-gradient(135deg, rgba(52,211,153,0.2), rgba(59,130,246,0.2))',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#34d399',
+                                            fontWeight: 900,
+                                            fontSize: '1.5rem',
+                                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)'
+                                        }}>
+                                            {member.initials}
+                                        </div>
+                                        <div>
+                                            <h3 style={{ fontSize: '1.875rem', fontWeight: 'bold', letterSpacing: '-0.025em', marginBottom: '0.25rem', color: '#ffffff' }}>
+                                                {member.name}
+                                            </h3>
+                                            <span style={{
+                                                fontSize: '0.625rem',
+                                                fontWeight: 900,
+                                                letterSpacing: '0.1em',
+                                                textTransform: 'uppercase',
+                                                padding: '0.25rem 0.75rem',
+                                                borderRadius: '9999px',
+                                                backgroundColor: member.role === 'Team Leader' ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.05)',
+                                                color: member.role === 'Team Leader' ? '#34d399' : '#9ca3af',
+                                                border: `1px solid ${member.role === 'Team Leader' ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)'}`
+                                            }}>
+                                                {member.role}
+                                            </span>
+                                        </div>
+                                    </div>
                                     
-                                    {/* Card Header */}
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-6">
-                                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center text-emerald-400 font-black text-2xl shadow-inner">
-                                                {member.initials}
-                                            </div>
-                                            <div>
-                                                <h3 className="text-3xl font-bold tracking-tight text-white mb-1">{member.name}</h3>
-                                                <span className={`text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full ${member.role === 'Team Leader' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-gray-400 border border-white/10'}`}>
-                                                    {member.role}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="hidden md:flex flex-col items-end gap-2">
-                                            <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Live Contact</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Contact Info */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                                        <button 
-                                            onClick={() => copyToClipboard(member.email, index)}
-                                            className="flex items-center justify-between gap-4 bg-[#0d1117] px-6 py-4 rounded-2xl border border-white/5 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group cursor-pointer"
-                                        >
-                                            <div className="flex items-center gap-4 overflow-hidden">
-                                                <Mail size={18} className="text-emerald-400 flex-shrink-0" />
-                                                <span className="text-sm font-mono text-gray-400 group-hover:text-white truncate">{member.email}</span>
-                                            </div>
-                                            {copiedIndex === index ? 
-                                                <Check size={18} className="text-emerald-400 flex-shrink-0" /> : 
-                                                <Copy size={16} className="text-gray-600 group-hover:text-emerald-400 flex-shrink-0" />
-                                            }
-                                        </button>
-
-                                        <div className="flex items-center gap-4 bg-[#0d1117] px-6 py-4 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all">
-                                            <Phone size={18} className="text-emerald-400" />
-                                            <span className="text-sm font-mono text-gray-400 hover:text-white transition-colors">{member.phone}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Card Footer */}
-                                    <div className="pt-8 border-t border-white/5 mt-8">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">EcoTrack Innovator Verified</span>
-                                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">STATUS: ACTIVE</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full w-full shadow-[0_0_15px_rgba(52,211,153,0.5)]" />
+                                    <div style={{ 
+                                        display: 'none',
+                                        '@media (min-width: 768px)': { display: 'flex' }
+                                    }} className="desktop-only">
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            backgroundColor: 'rgba(52,211,153,0.1)',
+                                            padding: '0.25rem 0.75rem',
+                                            borderRadius: '9999px',
+                                            border: '1px solid rgba(52,211,153,0.2)'
+                                        }}>
+                                            <span style={{
+                                                width: '0.375rem',
+                                                height: '0.375rem',
+                                                borderRadius: '50%',
+                                                backgroundColor: '#34d399',
+                                                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                                            }} />
+                                            <span style={{ fontSize: '0.625rem', fontWeight: 900, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                                Live Contact
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Contact Info */}
+                                <div style={{ 
+                                    display: 'grid', 
+                                    gridTemplateColumns: '1fr', 
+                                    gap: '1rem', 
+                                    marginTop: '2rem',
+                                    '@media (min-width: 768px)': { gridTemplateColumns: '1fr 1fr' }
+                                }} className="contact-grid">
+                                    <button 
+                                        onClick={() => copyToClipboard(member.email, index)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: '1rem',
+                                            backgroundColor: '#0d1117',
+                                            padding: '1rem 1.5rem',
+                                            borderRadius: '1rem',
+                                            border: '1px solid rgba(255,255,255,0.05)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            width: '100%'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.borderColor = 'rgba(52,211,153,0.5)';
+                                            e.currentTarget.style.backgroundColor = 'rgba(52,211,153,0.05)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+                                            e.currentTarget.style.backgroundColor = '#0d1117';
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', overflow: 'hidden' }}>
+                                            <Mail size={18} style={{ color: '#34d399', flexShrink: 0 }} />
+                                            <span style={{ 
+                                                fontSize: '0.875rem', 
+                                                fontFamily: 'monospace', 
+                                                color: '#9ca3af',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }} className="email-text">
+                                                {member.email}
+                                            </span>
+                                        </div>
+                                        {copiedIndex === index ? 
+                                            <Check size={18} style={{ color: '#34d399', flexShrink: 0 }} /> : 
+                                            <Copy size={16} style={{ color: '#4b5563', flexShrink: 0 }} className="copy-icon" />
+                                        }
+                                    </button>
+
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '1rem',
+                                        backgroundColor: '#0d1117',
+                                        padding: '1rem 1.5rem',
+                                        borderRadius: '1rem',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    className="phone-box"
+                                    >
+                                        <Phone size={18} style={{ color: '#34d399' }} />
+                                        <span style={{ fontSize: '0.875rem', fontFamily: 'monospace', color: '#9ca3af' }}>
+                                            {member.phone}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Card Footer */}
+                                <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                        <span style={{ fontSize: '0.625rem', fontWeight: 900, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                            EcoTrack Innovator Verified
+                                        </span>
+                                        <span style={{ 
+                                            fontSize: '0.625rem', 
+                                            fontWeight: 'bold', 
+                                            color: '#34d399', 
+                                            backgroundColor: 'rgba(52,211,153,0.1)', 
+                                            padding: '0.25rem 0.5rem', 
+                                            borderRadius: '0.25rem' 
+                                        }}>
+                                            STATUS: ACTIVE
+                                        </span>
+                                    </div>
+                                    <div style={{ height: '0.375rem', width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '9999px', overflow: 'hidden' }}>
+                                        <div style={{ 
+                                            height: '100%', 
+                                            width: '100%', 
+                                            background: 'linear-gradient(90deg, #34d399, #3b82f6)', 
+                                            borderRadius: '9999px',
+                                            boxShadow: '0 0 15px rgba(52,211,153,0.5)'
+                                        }} />
+                                    </div>
+                                </div>
                             </div>
-                        </ScrollStackItem>
+                        </div>
                     ))}
                 </ScrollStack>
             </div>
-            
-            {/* Bottom spacer for scroll */}
-            <div className="h-[50vh]" />
+
+            <style>{`
+                @media (min-width: 768px) {
+                    .desktop-only { display: flex !important; }
+                    .contact-grid { grid-template-columns: 1fr 1fr !important; }
+                }
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+                .copy-icon { transition: color 0.2s; }
+                button:hover .copy-icon { color: #34d399; }
+                .email-text { transition: color 0.2s; }
+                button:hover .email-text { color: #ffffff; }
+                .phone-box:hover { border-color: rgba(52,211,153,0.3) !important; }
+                .phone-box:hover span { color: #ffffff !important; }
+            `}</style>
         </div>
     );
 };
