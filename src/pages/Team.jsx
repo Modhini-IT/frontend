@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail } from 'lucide-react';
 
-const TeamScrollReveal = () => {
+const Team= () => {
     const navigate = useNavigate();
     const [visibleCards, setVisibleCards] = useState([]);
     const observerRef = useRef(null);
@@ -186,4 +186,4 @@ const TeamScrollReveal = () => {
     );
 };
 
-export default TeamScrollReveal;
+export default Team;
