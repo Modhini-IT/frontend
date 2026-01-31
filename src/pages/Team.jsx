@@ -101,6 +101,7 @@ const Team= () => {
                     </h1>
                     <p className="text-xl text-gray-400">
                         BTech IT • 1st Year • Sri Venkateswara College of Engineering
+                        
                     </p>
                 </div>
 
