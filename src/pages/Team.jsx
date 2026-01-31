@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, User } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, ShieldCheck, Copy, Check } from 'lucide-react';
 
 const Team = () => {
     const navigate = useNavigate();
     const [visibleCards, setVisibleCards] = useState([]);
+    const [copiedIndex, setCopiedIndex] = useState(null);
     const observerRef = useRef(null);
 
     const teamMembers = [
@@ -17,12 +18,7 @@ const Team = () => {
     ];
 
     useEffect(() => {
-        const options = {
-            root: null,
-            rootMargin: '0px 0px -15% 0px',
-            threshold: 0.2
-        };
-
+        const options = { threshold: 0.15 };
         observerRef.current = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
                 const index = parseInt(entry.target.dataset.index);
@@ -32,113 +28,98 @@ const Team = () => {
             });
         }, options);
 
-        const cards = document.querySelectorAll('.team-card-trigger');
-        cards.forEach(card => observerRef.current.observe(card));
-
+        document.querySelectorAll('.team-card-trigger').forEach(t => observerRef.current.observe(t));
         return () => observerRef.current?.disconnect();
     }, []);
 
+    const copyEmail = (email, index) => {
+        navigator.clipboard.writeText(email);
+        setCopiedIndex(index);
+        setTimeout(() => setCopiedIndex(null), 2000);
+    };
+
     return (
-        <div className="min-h-screen bg-[#0b0e14] text-white overflow-x-hidden font-sans selection:bg-[#10b981]/30">
-            {/* Eco-Themed Parallax Blobs */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-[#10b981]/10 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-[#0ea5e9]/5 rounded-full blur-[120px]" />
+        <div className="min-h-screen bg-[#0d1117] text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden">
+            {/* Eco Glows */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-emerald-500/5 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[30rem] h-[30rem] bg-blue-500/5 rounded-full blur-[100px]" />
             </div>
 
-            {/* Navigation */}
-            <nav className="fixed top-0 w-full z-50 px-8 py-6 flex justify-between items-center bg-[#0b0e14]/80 backdrop-blur-md border-b border-white/5">
+            {/* Nav */}
+            <nav className="fixed top-0 w-full z-50 px-8 py-5 flex justify-between items-center bg-[#0d1117]/80 backdrop-blur-xl border-b border-white/5">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-[#10b981] rounded-lg flex items-center justify-center">
-                        <User size={18} className="text-[#0b0e14]" />
-                    </div>
-                    <span className="font-bold text-xl tracking-tight">EcoTrack <span className="text-[#10b981]">Team</span></span>
+                    <ShieldCheck size={20} className="text-emerald-400" />
+                    <span className="font-bold text-xl tracking-tight text-white">EcoTrack <span className="text-emerald-400 font-medium">Team</span></span>
                 </div>
-                <button
-                    onClick={() => navigate('/')}
-                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
-                >
-                    <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Dashboard
+                <button onClick={() => navigate('/')} className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-all">
+                    <ArrowLeft size={16} /> Dashboard
                 </button>
             </nav>
 
-            <div className="max-w-4xl mx-auto px-6 pt-40 pb-60 relative z-10">
+            <div className="max-w-3xl mx-auto px-6 pt-40 pb-60 relative z-10">
                 <header className="text-center mb-32">
-                    <h1 className="text-5xl md:text-6xl font-extrabold mb-6 tracking-tight">
-                        Meet the <span className="text-[#10b981]">Innovators</span>
-                    </h1>
-                    <div className="flex items-center justify-center gap-3 text-gray-400 bg-white/5 w-fit mx-auto px-6 py-2 rounded-full border border-white/10">
-                        <span className="w-2 h-2 rounded-full bg-[#10b981] animate-ping" />
-                        BTech IT • Sri Venkateswara College of Engineering
-                    </div>
+                    <h1 className="text-5xl md:text-6xl font-black mb-6 tracking-tight text-white">Meet the <span className="text-emerald-400">Innovators</span></h1>
+                    <p className="text-gray-500 text-sm uppercase tracking-[0.4em] font-bold">BTech IT • SVCE</p>
                 </header>
 
-                {/* Team Stack */}
-                <div className="flex flex-col gap-12">
+                <div className="space-y-12">
                     {teamMembers.map((member, index) => {
                         const isVisible = visibleCards.includes(index);
                         return (
-                            <div
-                                key={index}
-                                data-index={index}
-                                className="team-card-trigger w-full"
-                            >
-                                <div
-                                    className={`relative transition-all duration-1000 cubic-bezier(0.2, 1, 0.3, 1) ${
-                                        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20 scale-[0.98]'
+                            <div key={index} data-index={index} className="team-card-trigger">
+                                <div 
+                                    className={`relative p-[1px] rounded-[32px] transition-all duration-1000 ease-out group ${
+                                        isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-20 scale-95'
                                     }`}
+                                    style={{
+                                        background: isVisible 
+                                            ? 'linear-gradient(145deg, rgba(52,211,153,0.3) 0%, rgba(255,255,255,0.03) 50%, rgba(14,165,233,0.2) 100%)' 
+                                            : 'transparent'
+                                    }}
                                 >
-                                    {/* Card Decoration (EcoTrack Style Line) */}
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-[#10b981] rounded-l-2xl z-20" />
-
-                                    <div className="bg-[#161b22] border border-white/5 p-8 md:p-12 rounded-2xl shadow-2xl overflow-hidden">
+                                    {/* Darker Internal Card */}
+                                    <div className="bg-[#090c12] rounded-[31px] p-8 md:p-10 relative z-10 hover:bg-[#0b0e16] transition-colors">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                                            
                                             <div className="flex items-center gap-6">
-                                                {/* Initials Circle */}
-                                                <div className="w-20 h-20 shrink-0 rounded-2xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center text-[#10b981] font-bold text-2xl shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                                                <div className="w-16 h-16 rounded-2xl bg-[#0d1117] border border-white/5 flex items-center justify-center text-emerald-400 font-black text-xl shadow-2xl">
                                                     {member.initials}
                                                 </div>
-                                                
                                                 <div>
-                                                    <h3 className="text-3xl font-bold tracking-tight mb-1">{member.name}</h3>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`text-sm font-semibold uppercase tracking-widest ${
-                                                            member.role === 'Team Leader' ? 'text-[#10b981]' : 'text-gray-500'
-                                                        }`}>
-                                                            {member.role}
-                                                        </span>
-                                                        {member.role === 'Team Leader' && (
-                                                            <span className="bg-[#10b981]/20 text-[#10b981] text-[10px] px-2 py-0.5 rounded-md font-black">CORE</span>
-                                                        )}
+                                                    <h3 className="text-3xl font-bold tracking-tight text-white">{member.name}</h3>
+                                                    <span className={`text-xs font-black tracking-widest uppercase ${member.role === 'Team Leader' ? 'text-emerald-400' : 'text-gray-500'}`}>
+                                                        {member.role} {member.role === 'Team Leader' && '• CORE'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col gap-2">
+                                                <button 
+                                                    onClick={() => copyEmail(member.email, index)}
+                                                    className="flex items-center justify-between gap-4 bg-[#0d1117] px-4 py-3 rounded-xl border border-white/5 hover:border-emerald-500/30 transition-all group/btn"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Mail size={14} className="text-emerald-400" />
+                                                        <span className="text-xs font-mono text-gray-400 group-hover/btn:text-emerald-100 transition-colors">{member.email}</span>
                                                     </div>
+                                                    {copiedIndex === index ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} className="text-gray-600 group-hover/btn:text-emerald-400" />}
+                                                </button>
+                                                <div className="flex items-center gap-3 bg-[#0d1117] px-4 py-3 rounded-xl border border-white/5">
+                                                    <Phone size={14} className="text-emerald-400" />
+                                                    <span className="text-xs font-mono text-gray-400">{member.phone}</span>
                                                 </div>
                                             </div>
-
-                                            {/* Contact Info (Dashboard Pill Style) */}
-                                            <div className="flex flex-col gap-3">
-                                                <div className="flex items-center gap-3 bg-[#0b0e14] px-4 py-3 rounded-xl border border-white/5 hover:border-[#10b981]/30 transition-all cursor-default">
-                                                    <Mail size={16} className="text-[#10b981]" />
-                                                    <span className="text-sm font-mono text-gray-400">{member.email}</span>
-                                                </div>
-                                                <div className="flex items-center gap-3 bg-[#0b0e14] px-4 py-3 rounded-xl border border-white/5 hover:border-[#10b981]/30 transition-all cursor-default">
-                                                    <Phone size={16} className="text-[#10b981]" />
-                                                    <span className="text-sm font-mono text-gray-400">{member.phone}</span>
-                                                </div>
-                                            </div>
-
                                         </div>
 
-                                        {/* Progress Bar Detail (Visual reference to EcoTrack Dashboard) */}
-                                        <div className="mt-10 pt-8 border-t border-white/5 flex items-center gap-4">
-                                            <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                                <div 
-                                                    className="h-full bg-[#10b981] rounded-full transition-all duration-1000 delay-500" 
-                                                    style={{ width: isVisible ? '100%' : '0%' }}
-                                                />
+                                        {/* Eco Status Bar */}
+                                        <div className="mt-8 pt-6 border-t border-white/5">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Contribution Active</span>
+                                                <span className="text-[10px] font-bold text-emerald-400 animate-pulse">LIVE</span>
                                             </div>
-                                            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-tighter">Contribution Active</span>
+                                            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-emerald-500 rounded-full transition-all duration-[2s]" style={{ width: isVisible ? '100%' : '0%' }} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -146,10 +127,6 @@ const Team = () => {
                         );
                     })}
                 </div>
-
-                <footer className="mt-40 text-center text-gray-600 text-sm">
-                    <p>© 2026 Team Ethu Nagarjuna Vaa • EcoTrack Initiative</p>
-                </footer>
             </div>
         </div>
     );
