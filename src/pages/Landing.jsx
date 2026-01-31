@@ -27,10 +27,7 @@ const Landing = () => {
                 <p className="text-xl md:text-2xl text-gray-200 font-light mb-2">
                     Smart Face Recognition & Movement Tracking System
                 </p>
-                <p className="text-lg text-emerald-400 font-medium mb-8" style={{ color: 'var(--accent-primary)' }}>
-                    Powered by AI. Driven by Sustainability.
-                </p>
-
+               
                 {/* Feature Badges */}
                 <div className="flex flex-wrap justify-center gap-4 mb-12">
                     <FeatureBadge icon={<ScanFace size={18} />} text="Face Recognition" />
@@ -70,3 +67,4 @@ const FeatureBadge = ({ icon, text }) => (
 );
 
 export default Landing;
+
