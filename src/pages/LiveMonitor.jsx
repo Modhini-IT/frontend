@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ShieldCheck, 
   Camera, 
   Plus, 
-  VideoOff,
+  Video, 
+  WifiOff, 
   Activity, 
   UserPlus, 
+  Bell, 
   AlertTriangle, 
   MapPin, 
   Clock, 
@@ -13,311 +15,236 @@ import {
   Loader2 
 } from 'lucide-react';
 
-const LiveMonitor = () => {
-  const uid = () => Math.random().toString(36).slice(2);
-  const now = () => new Date().toLocaleTimeString('en-US', { hour12: false });
-  
-  const statusConfig = {
-    'Bunking': { 
-      border: 'border-red-500', 
-      bg: 'bg-red-500/10', 
-      labelBg: 'bg-red-600', 
-      text: 'text-red-400'
-    },
-    'Authorized': { 
-      border: 'border-emerald-500', 
-      bg: 'bg-emerald-500/10', 
-      labelBg: 'bg-emerald-600', 
-      text: 'text-emerald-400'
-    },
-    'In Class': { 
-      border: 'border-blue-500', 
-      bg: 'bg-blue-500/10', 
-      labelBg: 'bg-blue-600', 
-      text: 'text-blue-400'
-    }
-  };
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+const now = () => new Date().toLocaleTimeString();
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
-  const sampleStudents = ['John Doe', 'Jane Smith', 'Alex Lee', 'Wei Chen', 'Carlos Ramirez'];
-  const sampleLocations = ['Cafeteria', 'Parking Lot', 'Library', 'Gym', 'Quad', 'Room 101'];
+const sampleStudents = ['John Doe', 'Jane Smith', 'Alex Lee', 'Priya Patel', 'Wei Chen', 'Carlos Ramirez', 'Aisha Khan', 'Emily Clark', 'Michael Brown', 'Sara Johnson'];
+const sampleReasons = ['Sports Competition', 'Medical', 'Library Duty', 'Lab Prep', 'Placement Event'];
+const sampleLocations = ['Cafeteria', 'Library', 'Quad', 'Gym', 'Parking Lot', 'Corridor', 'Garden'];
+const inClassLocations = ['Room 101', 'Room 202', 'CS Lab', 'Lecture Hall A'];
 
-  const [detections, setDetections] = useState([
-    { id: '1', name: 'Alex Lee', status: 'Authorized', x: 20, y: 15, w: 18, h: 30, location: 'Cafeteria' },
-    { id: '2', name: 'Wei Chen', status: 'In Class', x: 40, y: 28, w: 14, h: 24, location: 'Room 101' },
-    { id: '3', name: 'John Doe', status: 'Bunking', x: 28, y: 45, w: 16, h: 28, location: 'Parking Lot' },
-    { id: '4', name: 'John Doe', status: 'In Class', x: 45, y: 42, w: 14, h: 24, location: 'Lecture Hall A' },
-    { id: '5', name: 'Wei Chen', status: 'Authorized', x: 62, y: 20, w: 14, h: 24, location: 'Quad' },
-    { id: '6', name: 'Carlos Ramirez', status: 'In Class', x: 8, y: 48, w: 16, h: 28, location: 'Room 202' }
+function randomBox() {
+  const w = 15 + Math.random() * 15;
+  const h = 20 + Math.random() * 20;
+  const x = Math.random() * (100 - w - 4) + 2;
+  const y = Math.random() * (100 - h - 4) + 2;
+  return { x, y, w, h };
+}
+
+function statusStyles(status) {
+  switch (status) {
+    case 'Bunking': return { border: 'border-red-500/90', bg: 'bg-red-500/10', text: 'text-red-300' };
+    case 'Authorized': return { border: 'border-green-500/90', bg: 'bg-green-500/10', text: 'text-green-300' };
+    case 'In Class': return { border: 'border-blue-500/90', bg: 'bg-blue-500/10', text: 'text-blue-300' };
+    default: return { border: 'border-gray-500', bg: 'bg-gray-500/10', text: 'text-gray-300' };
+  }
+}
+
+function LiveMonitor() {
+  const [detections, setDetections] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [exemptions, setExemptions] = useState([
+    { id: '1', name: 'Jane Smith', reason: 'Medical' },
+    { id: '2', name: 'Alex Lee', reason: 'Sports Competition' }
   ]);
-  
-  const [activeAlert, setActiveAlert] = useState({
-    studentName: 'JOHN DOE',
-    location: 'Parking Lot',
-    timestamp: '10:47:28 AM',
-    notified: true
-  });
-  
+  const [search, setSearch] = useState('');
+  const [newExName, setNewExName] = useState('');
+  const [newExReason, setNewExReason] = useState('');
   const [isWebcamActive, setIsWebcamActive] = useState(false);
-  const [stream, setStream] = useState(null);
-  const [error, setError] = useState(null);
-  
   const videoRef = useRef(null);
 
-  // Handle webcam toggle
+  const filteredExemptions = useMemo(() => 
+    exemptions.filter(e => e.name.toLowerCase().includes(search.toLowerCase()) || e.reason.toLowerCase().includes(search.toLowerCase())),
+    [exemptions, search]
+  );
+
+  const [classes, setClasses] = useState([
+    { name: 'CS101', expected: 60, current: 54 },
+    { name: 'EE207', expected: 45, current: 42 },
+    { name: 'MA110', expected: 50, current: 48 },
+    { name: 'BIO150', expected: 40, current: 36 }
+  ]);
+
   useEffect(() => {
-    const startWebcam = async () => {
-      try {
-        if (isWebcamActive) {
-          const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            } 
-          });
-          setStream(mediaStream);
-          if (videoRef.current) {
-            videoRef.current.srcObject = mediaStream;
-          }
-          setError(null);
-        } else {
-          if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-          }
-          if (videoRef.current) {
-            videoRef.current.srcObject = null;
-          }
-        }
-      } catch (err) {
-        console.error("Webcam error:", err);
-        setError("Camera access denied");
-        setIsWebcamActive(false);
-      }
-    };
-
-    startWebcam();
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
+    if (isWebcamActive && videoRef.current) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { if (videoRef.current) videoRef.current.srcObject = stream; })
+        .catch(err => { console.error(err); setIsWebcamActive(false); });
+    } else if (!isWebcamActive && videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
   }, [isWebcamActive]);
 
   const simulateDetection = () => {
     const name = sampleStudents[Math.floor(Math.random() * sampleStudents.length)];
-    const rand = Math.random();
-    let status = 'In Class';
-    let location = sampleLocations[Math.floor(Math.random() * sampleLocations.length)];
+    const box = randomBox();
+    const r = Math.random();
+    let status, location;
 
-    if (rand > 0.6) {
-      if (rand > 0.8) {
+    if (r < 0.45) {
+      status = 'Bunking';
+      location = sampleLocations[Math.floor(Math.random() * sampleLocations.length)];
+      if (exemptions.some(e => e.name.toLowerCase() === name.toLowerCase())) {
         status = 'Authorized';
       } else {
-        status = 'Bunking';
-        setActiveAlert({
-          studentName: name.toUpperCase(),
-          location: location,
-          timestamp: now(),
-          notified: false
-        });
-        setTimeout(() => setActiveAlert(prev => ({ ...prev, notified: true })), 1500);
+        const id = uid();
+        setAlerts(prev => [{ id, studentName: name, location, timestamp: now(), messageSent: false }, ...prev].slice(0, 20));
+        setTimeout(() => setAlerts(prev => prev.map(a => a.id === id ? { ...a, messageSent: true } : a)), 1500);
       }
+    } else if (r < 0.80) {
+      status = 'Authorized';
+      location = sampleLocations[Math.floor(Math.random() * sampleLocations.length)];
+    } else {
+      status = 'In Class';
+      location = inClassLocations[Math.floor(Math.random() * inClassLocations.length)];
     }
 
-    const newDetection = {
-      id: uid(),
-      name,
-      status,
-      location,
-      x: 10 + Math.random() * 70,
-      y: 10 + Math.random() * 60,
-      w: 12 + Math.random() * 8,
-      h: 20 + Math.random() * 12
-    };
-
-    setDetections(prev => [newDetection, ...prev].slice(0, 6));
+    setDetections(prev => [{ id: uid(), name, status, ...box, location }, ...prev].slice(0, 6));
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-gray-100 flex flex-col">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-[#0f172a]/90 backdrop-blur-md sticky top-0 z-50">
-        <div className="mx-auto max-w-[1400px] px-6 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-neutral-950 text-gray-100 flex flex-col">
+      <header className="border-b border-neutral-800/80 bg-neutral-900/60 backdrop-blur sticky top-0 z-50">
+        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-              <ShieldCheck className="h-5 w-5 text-emerald-400" />
+            <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+              <ShieldCheck className="h-6 w-6 text-emerald-400" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Smart Campus</h1>
-              <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-[0.15em]">Attendance & Bunking Tracker</p>
+            <div className="hidden sm:block">
+              <h1 className="text-xl font-bold tracking-tight text-white">Smart Campus</h1>
+              <p className="text-[10px] text-emerald-400 font-semibold uppercase tracking-widest leading-none mt-1">Attendance & Bunking Tracker</p>
             </div>
           </div>
-          
           <div className="flex items-center gap-3">
-            {/* Start/Stop Webcam Button */}
             <button
               onClick={() => setIsWebcamActive(!isWebcamActive)}
-              className={`inline-flex items-center gap-2 rounded-lg transition px-4 py-2 text-sm font-medium ${
-                isWebcamActive 
-                  ? 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/30' 
-                  : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
-              }`}
+              className={`inline-flex items-center gap-2 rounded-lg transition px-4 py-2 text-sm font-medium ${isWebcamActive ? 'bg-red-600 hover:bg-red-500' : 'bg-neutral-800 hover:bg-neutral-700'}`}
             >
-              {isWebcamActive ? <VideoOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-              <span>{isWebcamActive ? 'Stop Webcam' : 'Start Webcam'}</span>
+              <Camera className="h-4 w-4" /> <span>{isWebcamActive ? 'Stop' : 'Start'} Webcam</span>
             </button>
-            
-            <button 
-              onClick={simulateDetection} 
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition px-4 py-2 text-sm font-medium text-white shadow-lg shadow-emerald-900/40"
-            >
-              <Plus className="h-4 w-4" /> 
-              <span>Simulation</span>
+            <button onClick={simulateDetection} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition px-4 py-2 text-sm font-medium shadow-lg shadow-emerald-900/40">
+              <Plus className="h-4 w-4" /> Simulation
             </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 mx-auto max-w-[1400px] w-full px-4 py-4 grid grid-cols-12 gap-4">
-        {/* Left Column - Video Feed */}
-        <section className="col-span-12 lg:col-span-9 space-y-4">
-          {/* Video Container */}
-          <div className="relative rounded-xl border border-slate-800 bg-black overflow-hidden shadow-2xl aspect-video">
-            
-            {/* WEBCAM FEED */}
-            <video 
-              ref={videoRef}
-              autoPlay 
-              playsInline 
-              muted
-              className={`absolute inset-0 w-full h-full object-cover transform scale-x-[-1] ${
-                isWebcamActive ? 'opacity-100' : 'opacity-0'
-              }`}
-            />
-            
-            {/* Standby / Offline State */}
-            {!isWebcamActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 to-black">
-                <Camera className="h-16 w-16 mb-4 text-slate-700" />
-                <p className="text-xs font-bold tracking-[0.2em] uppercase text-slate-500">
-                  {error || "Camera Offline - Click Start Webcam"}
-                </p>
-              </div>
-            )}
-
-            {/* Overlay Effects */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none" />
-            <div className="absolute inset-0 pointer-events-none opacity-10" 
-                 style={{ 
-                   backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', 
-                   backgroundSize: '50px 50px' 
-                 }} 
-            />
-
-            {/* Detection Boxes */}
-            {detections.map(d => {
-              const styles = statusConfig[d.status];
-              return (
-                <div 
-                  key={d.id} 
-                  className={`absolute ${styles.border} ${styles.bg} rounded-lg border-2 transition-all duration-500 backdrop-blur-sm`}
-                  style={{ 
-                    left: `${d.x}%`, 
-                    top: `${d.y}%`, 
-                    width: `${d.w}%`, 
-                    height: `${d.h}%`,
-                    boxShadow: `0 0 20px currentColor`
-                  }}
-                >
-                  <div className={`absolute -top-10 left-0 ${styles.labelBg} text-white px-3 py-1.5 rounded-md text-[11px] font-bold whitespace-nowrap border border-white/20 shadow-lg`}>
-                    <p className="leading-tight">{d.name}</p>
-                    <p className="text-[9px] opacity-90 font-medium leading-tight mt-0.5">{d.status} • {d.location}</p>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Recording Indicator */}
-            {isWebcamActive && (
-              <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/50 backdrop-blur px-3 py-1.5 rounded-lg border border-white/10">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Live</span>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom Panels */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Attendance Logs */}
-            <div className="p-5 rounded-xl border border-slate-800 bg-[#0f172a]/60">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-                <Activity className="h-3.5 w-3.5 text-emerald-400" /> 
-                Attendance Logs
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-xs font-bold mb-1.5">
-                    <span className="text-slate-500">CS101</span>
-                    <span className="text-slate-300">54/60</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 w-[90%] shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
-                  </div>
-                </div>
+      <main className="flex-1 mx-auto max-w-7xl w-full px-6 py-8 grid grid-cols-12 gap-8">
+        <section className="col-span-12 lg:col-span-8 space-y-8">
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 bg-neutral-900/80 border-b border-neutral-800">
+              <h2 className="text-sm font-bold flex items-center gap-2 tracking-wide uppercase">
+                <Video className="h-4 w-4 text-sky-400" /> Live surveillance feed
+              </h2>
+              <div className="flex gap-4 items-center">
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span><span className="text-[10px] uppercase font-bold text-blue-400">Class</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500"></span><span className="text-[10px] uppercase font-bold text-red-400">Bunk</span></div>
               </div>
             </div>
+            <div className="relative aspect-video bg-black group overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.8)_100%)] z-10 pointer-events-none"></div>
+              {isWebcamActive ? (
+                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1] opacity-70 grayscale contrast-125" />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center opacity-30 select-none">
+                  <WifiOff className="h-16 w-16 mb-4 text-neutral-600" />
+                  <p className="text-xs font-bold tracking-[0.2em] uppercase">Signal Encrypted / Standby</p>
+                </div>
+              )}
+              {detections.map(d => {
+                const styles = statusStyles(d.status);
+                return (
+                  <div key={d.id} className={`absolute ${styles.border} ${styles.bg} rounded-xl border-2 transition-all duration-500 z-20`} style={{left: `${d.x}%`, top: `${d.y}%`, width: `${d.w}%`, height: `${d.h}%`}}>
+                    <div className={`absolute -top-10 left-0 ${styles.text} bg-neutral-900/90 backdrop-blur px-3 py-1.5 rounded-lg border border-neutral-700 shadow-2xl whitespace-nowrap`}>
+                      <p className="text-xs font-bold">{d.name}</p>
+                      <p className="text-[10px] opacity-70 font-medium">{d.status} • {d.location}</p>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="absolute inset-0 pointer-events-none opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] blend-overlay"></div>
+            </div>
+          </div>
 
-            {/* Fast Exemption */}
-            <div className="p-5 rounded-xl border border-slate-800 bg-[#0f172a]/60">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-                <UserPlus className="h-3.5 w-3.5 text-purple-400" /> 
-                Fast Exemption
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="p-6 rounded-2xl border border-neutral-800 bg-neutral-900/40">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-6 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-emerald-400" /> Attendance logs
               </h3>
-              <input 
-                placeholder="Student Name" 
-                className="w-full bg-[#020617] border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-purple-500/50 transition mb-3"
-              />
-              <button className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition border border-slate-700">
-                Grant Exemption
-              </button>
+              <div className="space-y-4">
+                {classes.map(c => (
+                  <div key={c.name} className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-neutral-500">{c.name}</span>
+                      <span>{c.current}/{c.expected}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" style={{width: `${(c.current/c.expected)*100}%`}}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-6 rounded-2xl border border-neutral-800 bg-neutral-900/40">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-6 flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-purple-400" /> Fast exemption
+              </h3>
+              <div className="space-y-3">
+                <input value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="Student Name" className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-xs focus:ring-1 focus:ring-purple-500 transition outline-none"/>
+                <select value={newExReason} onChange={e => setNewExReason(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-xs outline-none focus:ring-1 focus:ring-purple-500 transition appearance-none">
+                  <option value="">Choose Reason</option>
+                  {sampleReasons.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <button onClick={() => { if(newExName && newExReason) { setExemptions([{id: uid(), name: newExName, reason: newExReason}, ...exemptions]); setNewExName(''); setNewExReason(''); } }} className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-purple-900/20">Add Authority</button>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Right Sidebar - Active Alert */}
-        <aside className="col-span-12 lg:col-span-3">
-          <div className="rounded-xl border border-slate-800 bg-[#0f172a]/60 p-4 sticky top-20">
-            <div className="flex items-center justify-center mb-4">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+        <aside className="col-span-12 lg:col-span-4 h-fit">
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 overflow-hidden shadow-xl">
+            <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex justify-between items-center">
+              <h3 className="text-xs font-bold tracking-widest uppercase flex items-center gap-2">
+                <Bell className="h-4 w-4 text-amber-500" /> Incident List
+              </h3>
+              <span className="text-[10px] font-bold bg-neutral-800 px-2 py-0.5 rounded text-neutral-500 tracking-tighter">{alerts.length} ITEMS</span>
             </div>
-            
-            <div className="bg-[#020617] rounded-xl p-5 border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.1)]">
-              <h4 className="text-base font-bold text-white uppercase tracking-wide text-center mb-4">
-                {activeAlert.studentName}
-              </h4>
-              
-              <div className="flex flex-col items-center gap-2 text-[11px] text-slate-500 mb-4">
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {activeAlert.location}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  {activeAlert.timestamp}
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400 pt-4 border-t border-slate-800">
-                <CheckCircle className="h-4 w-4" />
-                <span>Advisor Notified</span>
-              </div>
+            <div className="p-6 space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar">
+              {alerts.map(a => (
+                <div key={a.id} className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 group transition-all hover:border-red-500/50">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-xs font-bold text-gray-200 uppercase tracking-wide">{a.studentName}</h4>
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-500 animate-pulse" />
+                  </div>
+                  <div className="flex gap-4 text-[10px] text-neutral-500 font-medium mb-3">
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {a.location}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {a.timestamp}</span>
+                  </div>
+                  <div className={`mt-2 pt-2 border-t border-neutral-900 flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider ${a.messageSent ? 'text-emerald-500' : 'text-amber-500'}`}>
+                    {a.messageSent ? <CheckCircle className="h-3.5 w-3.5" /> : <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <span>{a.messageSent ? 'Advisor Notified' : 'Dispatching SMS...'}</span>
+                  </div>
+                </div>
+              ))}
+              {alerts.length === 0 && (
+                <div className="py-12 text-center opacity-20 font-bold uppercase tracking-widest text-xs">No active violations</div>
+              )}
             </div>
           </div>
         </aside>
       </main>
+
+      <footer className="p-8 mt-auto border-t border-neutral-900">
+        <div className="mx-auto max-w-7xl flex justify-between items-center opacity-30 text-[10px] uppercase font-bold tracking-[0.2em]">
+          <span>System v2.5.0-Deployment</span>
+          <span>Secure Channel 01 Active</span>
+        </div>
+      </footer>
     </div>
   );
-};
+}
 
 export default LiveMonitor;
