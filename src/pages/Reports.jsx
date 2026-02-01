@@ -3,7 +3,6 @@ import { FileText, Download, Calendar } from 'lucide-react';
 
 const REPORTS = [
     { id: 1, title: 'Daily Attendance Summary', date: 'Jan 28, 2024', size: '1.2 MB' },
-    { id: 2, title: 'Weekly Energy Audit', date: 'Jan 27, 2024', size: '3.5 MB' },
     { id: 3, title: 'Campus Occupancy Heatmap', date: 'Jan 25, 2024', size: '5.8 MB' },
     { id: 4, title: 'Monthly Security Logs', date: 'Jan 01, 2024', size: '12.4 MB' },
 ];
@@ -59,3 +58,4 @@ const PlusIcon = () => (
 );
 
 export default Reports;
+
