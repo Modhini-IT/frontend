@@ -626,6 +626,18 @@ button {
   box-shadow: 0 0 10px #10b981;
 }
 
+@keyframes scanline {
+  0% { 
+    transform: translateY(-100%); 
+  }
+  100% { 
+    transform: translateY(100%); 
+  }
+}
+
+.animate-scanline {
+  animation: scanline 4s linear infinite;
+}
 .dock-icon {
   display: flex;
   align-items: center;
