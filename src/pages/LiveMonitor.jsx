@@ -1,142 +1,185 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, Zap, Users, AlertCircle, Leaf } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  ShieldCheck, Video, Activity, Bell, 
+  Search, Plus, CheckCircle, Loader2 
+} from 'lucide-react';
 
-// Mock WebSocket data simulation
-const useLiveUpdates = () => {
-    const [data, setData] = useState({
-        occupancy: 45,
-        energyUsage: 12.5,
-        status: 'Active',
-        feedTimestamp: new Date().toLocaleTimeString()
-    });
+// --- Utilities ---
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+const now = () => new Date().toLocaleTimeString();
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setData(prev => ({
-                occupancy: Math.max(0, prev.occupancy + Math.floor(Math.random() * 5) - 2),
-                energyUsage: (12 + Math.random()).toFixed(2),
-                status: 'Active',
-                feedTimestamp: new Date().toLocaleTimeString()
-            }));
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
+const sampleStudents = ['John Doe', 'Jane Smith', 'Alex Lee', 'Priya Patel', 'Wei Chen', 'Carlos Ramirez', 'Aisha Khan', 'Emily Clark', 'Michael Brown', 'Sara Johnson'];
+const sampleReasons = ['Sports Competition', 'Medical', 'Library Duty', 'Lab Prep', 'Placement Event'];
+const sampleLocations = ['Cafeteria', 'Library', 'Quad', 'Gym', 'Parking Lot', 'Corridor', 'Garden'];
+const inClassLocations = ['Room 101', 'Room 202', 'CS Lab', 'Lecture Hall A'];
 
-    return data;
-};
+function randomBox() {
+    const w = 15 + Math.random() * 15;
+    const h = 25 + Math.random() * 15;
+    return {
+        id: uid(),
+        x: Math.random() * (100 - w),
+        y: Math.random() * (100 - h),
+        w,
+        h,
+        student: sampleStudents[Math.floor(Math.random() * sampleStudents.length)],
+        status: Math.random() > 0.7 ? 'Bunking' : 'In Class',
+        location: Math.random() > 0.7 ? sampleLocations[Math.floor(Math.random() * sampleLocations.length)] : inClassLocations[Math.floor(Math.random() * inClassLocations.length)]
+    };
+}
 
 const LiveMonitor = () => {
-    const stats = useLiveUpdates();
+    const [detections, setDetections] = useState([]);
+    const [alerts, setAlerts] = useState([]);
+    const [exemptions, setExemptions] = useState([]);
+    const [showExemptionModal, setShowExemptionModal] = useState(false);
+    const [newExemption, setNewExemption] = useState({ name: '', reason: '' });
+    const videoRef = useRef(null);
+
+    // Camera Setup
+    useEffect(() => {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => { if (videoRef.current) videoRef.current.srcObject = stream; })
+                .catch(err => console.error("Webcam Error:", err));
+        }
+    }, []);
+
+    // Simulated Detection Engine
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const count = 2 + Math.floor(Math.random() * 3);
+            const newDetections = Array.from({ length: count }, randomBox);
+            setDetections(newDetections);
+
+            // Handle alerts for bunking students
+            newDetections.forEach(d => {
+                const isExempt = exemptions.some(e => e.name.toLowerCase() === d.student.toLowerCase());
+                if (d.status === 'Bunking' && !isExempt) {
+                    const alertId = uid();
+                    setAlerts(prev => [{
+                        id: alertId,
+                        student: d.student,
+                        location: d.location,
+                        time: now(),
+                        messageSent: false
+                    }, ...prev].slice(0, 10));
+
+                    // Simulate SMS notification delay
+                    setTimeout(() => {
+                        setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, messageSent: true } : a));
+                    }, 2500);
+                }
+            });
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [exemptions]);
+
+    const handleAddExemption = (e) => {
+        e.preventDefault();
+        if (newExemption.name) {
+            setExemptions([...exemptions, { ...newExemption, id: uid() }]);
+            setNewExemption({ name: '', reason: '' });
+            setShowExemptionModal(false);
+        }
+    };
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-2xl font-bold mb-1">Live Monitor</h1>
-                    <p className="text-gray-400 font-medium">Real-time camera feed and room status</p>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    System Online
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Camera Feed */}
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="glass-panel p-1 relative overflow-hidden aspect-video bg-black flex items-center justify-center group border-white/10">
-                        {/* Gradient Overlay for "Scanning" effect */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/5 to-transparent animate-scanline pointer-events-none z-10"></div>
-
-                        {/* Mock Camera Placeholder Image */}
-                        <img
-                            src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1000&auto=format&fit=crop"
-                            alt="Live Feed"
-                            className="w-full h-full object-cover opacity-60"
-                        />
-
-                        <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded text-xs font-mono text-white flex items-center gap-2 z-20 border border-white/5">
-                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                            REC • {stats.feedTimestamp}
-                        </div>
-
-                        <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end z-20">
-                            <div className="bg-black/60 backdrop-blur-md px-3 py-2 rounded text-xs border border-white/5">
-                                <p className="text-gray-400 uppercase text-[10px] font-bold tracking-tighter">Camera ID</p>
-                                <p className="font-mono">CAM-LIB-01</p>
+        <div className="flex flex-col h-full bg-neutral-950 text-gray-100 font-sans">
+            <main className="flex-1 grid grid-cols-12 overflow-hidden">
+                {/* Surveillance Feed Column */}
+                <div className="col-span-12 lg:col-span-9 p-4 flex flex-col gap-4 overflow-y-auto">
+                    <header className="flex items-center justify-between bg-neutral-900/50 p-4 rounded-2xl border border-neutral-800">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20">
+                                <ShieldCheck className="h-6 w-6 text-emerald-500" />
                             </div>
-                            <div className="bg-black/60 backdrop-blur-md px-3 py-2 rounded text-xs border border-white/5">
-                                <p className="text-gray-400 uppercase text-[10px] font-bold tracking-tighter">Detection</p>
-                                <p className="font-mono text-emerald-400">FACE_ID_ACTIVE</p>
+                            <div>
+                                <h1 className="text-xl font-bold tracking-tight">Live Surveillance</h1>
+                                <p className="text-xs text-emerald-500/60 font-mono flex items-center gap-1.5">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    SYSTEM ACTIVE • 24.05 FPS
+                                </p>
                             </div>
                         </div>
+                        <button 
+                            onClick={() => setShowExemptionModal(true)}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-neutral-950 px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/10"
+                        >
+                            <Plus className="h-4 w-4" /> Fast Exemption
+                        </button>
+                    </header>
 
-                        {/* Face Detection Boxes (Mock) */}
-                        <div className="absolute top-1/2 left-1/3 w-24 h-24 border-2 border-emerald-400/50 rounded z-10 hidden group-hover:block transition-all">
-                            <div className="absolute -top-6 left-0 bg-emerald-500/80 text-black text-[10px] px-1 rounded-sm font-bold">ID: 9822</div>
+                    {/* Camera Feed Container */}
+                    <div className="relative aspect-video bg-black rounded-3xl border border-neutral-800 overflow-hidden shadow-2xl group">
+                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale contrast-125 opacity-40" />
+                        
+                        {/* Detection Overlays */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            {detections.map(det => {
+                                const isExempt = exemptions.some(e => e.name.toLowerCase() === det.student.toLowerCase());
+                                const colorClass = isExempt ? 'border-emerald-500 bg-emerald-500/10' : 
+                                                 det.status === 'Bunking' ? 'border-red-500 bg-red-500/10' : 
+                                                 'border-blue-500 bg-blue-500/10';
+                                
+                                return (
+                                    <div key={det.id} className={`absolute border-2 transition-all duration-700 rounded-sm ${colorClass}`}
+                                         style={{ left: `${det.x}%`, top: `${det.y}%`, width: `${det.w}%`, height: `${det.h}%` }}>
+                                        <div className="absolute -top-6 left-0 whitespace-nowrap bg-black/80 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                                            {isExempt ? 'AUTHORIZED' : det.student} • {det.location}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
+                </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {['Library Main', 'Entrance', 'Reading Room', 'Corridor'].map((cam, i) => (
-                            <div key={i} className={`glass-panel p-2 cursor-pointer transition-all hover:border-emerald-500/50 ${i === 0 ? 'border-emerald-500/50 bg-emerald-500/5' : 'opacity-60 hover:opacity-100 border-white/5'}`}>
-                                <div className="aspect-video bg-black/40 rounded overflow-hidden relative">
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <Camera size={16} className="text-gray-600" />
-                                    </div>
+                {/* Sidebar Alerts */}
+                <aside className="col-span-12 lg:col-span-3 border-l border-neutral-900 bg-neutral-950/50 p-4 overflow-y-auto">
+                    <div className="flex items-center gap-2 mb-6 text-neutral-400">
+                        <Bell className="h-4 w-4" />
+                        <h2 className="text-xs font-bold uppercase tracking-[0.2em]">Incident Log</h2>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        {alerts.map(a => (
+                            <div key={a.id} className="p-4 rounded-2xl bg-neutral-900/50 border border-neutral-800 animate-in slide-in-from-right-4 duration-500">
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="text-red-400 text-[10px] font-black uppercase tracking-widest bg-red-400/10 px-2 py-0.5 rounded">Violation</span>
+                                    <span className="text-neutral-500 text-[10px] font-mono">{a.time}</span>
                                 </div>
-                                <p className="text-[10px] mt-2 text-center text-gray-400 uppercase font-bold tracking-wider">{cam}</p>
+                                <h3 className="font-bold text-sm text-white">{a.student}</h3>
+                                <p className="text-xs text-neutral-400 mb-3">Detected at <span className="text-neutral-200">{a.location}</span></p>
+                                <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${a.messageSent ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                    {a.messageSent ? <CheckCircle className="h-3 w-3" /> : <Loader2 className="h-3 w-3 animate-spin" />}
+                                    {a.messageSent ? 'Advisor Notified' : 'Dispatching SMS...'}
+                                </div>
                             </div>
                         ))}
                     </div>
-                </div>
+                </aside>
+            </main>
 
-                {/* Live Stats */}
-                <div className="space-y-4">
-                    <div className="glass-panel p-6 border-white/5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-lg">Current Status</h3>
-                            <Users className="text-emerald-400" size={20} />
-                        </div>
-                        <div className="text-4xl font-black mb-2">{stats.occupancy}</div>
-                        <p className="text-sm text-gray-400 font-medium">Students detected in Library</p>
-                        <div className="w-full bg-white/5 rounded-full h-2 mt-4 overflow-hidden">
-                            <div className="bg-emerald-400 h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (stats.occupancy / 100) * 100)}%` }}></div>
-                        </div>
-                        <p className="text-[10px] text-right mt-1 text-gray-500 font-bold uppercase tracking-widest">{Math.min(100, (stats.occupancy / 100) * 100).toFixed(0)}% Capacity</p>
-                    </div>
-
-                    <div className="glass-panel p-6 border-white/5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-lg">Energy Impact</h3>
-                            <Zap className="text-yellow-400" size={20} />
-                        </div>
-                        <div className="text-4xl font-black mb-2">{stats.energyUsage} <span className="text-lg text-gray-500 font-normal tracking-tight">kWh</span></div>
-                        <p className="text-sm text-gray-400 font-medium">Current power consumption</p>
-                        <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-300 flex items-start gap-2">
-                            <Leaf size={14} className="mt-0.5 shrink-0" />
-                            <span>Smart lighting reduced output by 30% due to sufficient daylight.</span>
-                        </div>
-                    </div>
-
-                    <div className="glass-panel p-6 border-red-500/20 bg-red-500/5">
-                        <div className="flex items-center gap-3 mb-4">
-                            <AlertCircle className="text-red-400" size={20} />
-                            <h3 className="font-bold uppercase tracking-tight">System Alerts</h3>
-                        </div>
-                        <ul className="space-y-3 text-xs text-gray-400 font-medium">
-                            <li className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"></span>
-                                Unauthorized entry attempt (Block 2)
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0"></span>
-                                Camera 03 offline (Reconnecting...)
-                            </li>
-                        </ul>
+            {/* Exemption Modal */}
+            {showExemptionModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl">
+                        <h2 className="text-2xl font-black mb-6">Quick Exemption</h2>
+                        <form onSubmit={handleAddExemption} className="space-y-4">
+                            <input 
+                                className="w-full bg-neutral-800 border-none rounded-2xl px-6 py-4 text-white focus:ring-2 focus:ring-emerald-500"
+                                placeholder="Student Full Name"
+                                value={newExemption.name}
+                                onChange={e => setNewExemption({...newExemption, name: e.target.value})}
+                            />
+                            <button className="w-full bg-emerald-500 py-4 rounded-2xl font-black text-neutral-950 uppercase tracking-widest">Authorize Access</button>
+                            <button type="button" onClick={() => setShowExemptionModal(false)} className="w-full text-neutral-500 font-bold py-2">Cancel</button>
+                        </form>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
